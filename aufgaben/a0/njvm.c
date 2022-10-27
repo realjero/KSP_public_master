@@ -17,9 +17,10 @@
 #define WRCHR 10
 
 // CONVERT
-#define IMMEDIATE(x) ((x) & 0x00FFFFFF)
-#define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
+#define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl unter 23 Bit
+#define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))          // Wenn Bit 23 => 1, dann negative Zahl, die durch 8 weitere 1-en in den höchstwertigen Bits erweitert werden muss.
 
+// TODO: Instructions berechenen und in program_memory ablegen & ausführen
 
 int sp = 0;
 int stack[MAXITEMS];
