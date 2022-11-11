@@ -1,4 +1,0 @@
-include::../aufgaben_includeme.adoc[]
-
-include::aufgabe.adoc[]
-//a3
