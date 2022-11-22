@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+// gcc -g -Wall -std=c99 -pedantic -o vm njvm.c
+
 #define MAXITEMS 100
 
 // INSTRUCTIONS
@@ -23,8 +25,6 @@
 #define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl unter 23 Bit
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))          // Wenn Bit 23 => 1, dann negative Zahl, die durch 8 weitere 1-en in den höchstwertigen Bits erweitert werden muss.
 
-// TODO: Instructions berechenen und in program_memory ablegen & ausführen
-
 
 int stack_pointer = 0;
 unsigned int stack[MAXITEMS];
@@ -32,7 +32,8 @@ unsigned int stack[MAXITEMS];
 unsigned int *program_memory;
 int program_counter;
 
-
+// CODE FILES
+/*
 //     writeInteger((3 + 4) * (10 - 6));
 //     writeCharacter('\n');
 unsigned int code1[] = {
@@ -72,7 +73,7 @@ unsigned int code3[] = {
         (WRCHR << 24),
         (HALT << 24)
 };
-
+*/
 
 void push(int x) {
     if(stack_pointer <= MAXITEMS) {
@@ -214,26 +215,32 @@ void start_program_memory(void) {
 
 int main(int argc, char *argv[]) {
     if(argc == 2) {
-        if(strcmp(argv[1], "--help") == 0) {
-            printf("usage: ./njvm [option] [option] ...\n");
-            printf("  --prog1          select program 1 to execute\n");
-            printf("  --prog2          select program 2 to execute\n");
-            printf("  --prog3          select program 3 to execute\n");
-            printf("  --version        show version and exit\n");
-            printf("  --help           show this help and exit\n");
+        if(argv[1][0] == '-') {
+            if (strcmp(argv[1], "--help") == 0) {
+                printf("usage: ./njvm [option] [option] ...\n");
+                printf("  --version        show version and exit\n");
+                printf("  --help           show this help and exit\n");
+                return 0;
+            } else if (strcmp(argv[1], "--version") == 0) {
+                printf("Ninja Virtual Machine version 0 (compiled Sep 23 2015, 10:36:52)\n");
+                return 0;
+            } else {
+                printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
+                return 0;
+            }
+        } else if(strcmp(argv[1], "") == 0){
+            printf("Error: no code file specified\n");
             return 0;
-        } else if(strcmp(argv[1], "--version") == 0) {
-            printf("Ninja Virtual Machine version 0 (compiled Sep 23 2015, 10:36:52)\n");
-            return 0;
-        } else if(strcmp(argv[1], "--prog1") == 0) {
-            program_memory = code1;
-        } else if(strcmp(argv[1], "--prog2") == 0) {
-            program_memory = code2;
-        } else if(strcmp(argv[1], "--prog3") == 0) {
-            program_memory = code3;
         } else {
-            printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
-            return 0;
+            FILE *fp = NULL;
+            fp = fopen(argv[1], "r");
+            if(fp == NULL) {
+                printf("Error: cannot open code file '%s'", argv[1]);
+                return 0;
+            }
+            char c[4];
+            size_t read_len = fread(c, 1, 4, fp);
+            printf("r %d bytes: c = [%c, %c, %c, %c]\n", read_len, c[0], c[1], c[2], c[3]);
         }
     }
 
