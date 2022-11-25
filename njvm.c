@@ -4,7 +4,7 @@
 
 // gcc -g -Wall -std=c99 -pedantic -o vm njvm.c
 
-#define MAXITEMS 100
+#define MAXITEMS 10000
 
 // INSTRUCTIONS
 
@@ -19,9 +19,15 @@
 #define WRINT 8
 #define RDCHR 9
 #define WRCHR 10
+#define PUSHG 11
+#define POPG 12
+#define ASF 13
+#define RSF 14
+#define PUSHL 15
+#define POPL 16
+
 
 // CONVERT
-
 #define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl unter 23 Bit
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))          // Wenn Bit 23 => 1, dann negative Zahl, die durch 8 weitere 1-en in den höchstwertigen Bits erweitert werden muss.
 
@@ -30,55 +36,15 @@ int stack_pointer = 0;
 int frame_pointer = 0;
 unsigned int stack[MAXITEMS];
 
+int sda_size = 0;
+int sda_pointer = 0;
 unsigned int *sda;
 
 unsigned int *program_memory;
 int program_counter;
 
-// CODE FILES
-/*
-//     writeInteger((3 + 4) * (10 - 6));
-//     writeCharacter('\n');
-unsigned int code1[] = {
-        (PUSHC << 24) | IMMEDIATE(3),
-        (PUSHC << 24) | IMMEDIATE(4),
-        (ADD << 24),
-        (PUSHC << 24) | IMMEDIATE(10),
-        (PUSHC << 24) | IMMEDIATE(6),
-        (SUB << 24),
-        (MUL << 24),
-        (WRINT << 24),
-        (PUSHC << 24) | IMMEDIATE('\n'),
-        (WRCHR << 24),
-        (HALT << 24)
-};
 
-//    writeInteger(-2 * readInteger() + 3);
-//    writeCharacter('\n');
-unsigned int code2[] = {
-        (PUSHC << 24) | IMMEDIATE(-2),
-        (RDINT << 24),
-        (MUL << 24),
-        (PUSHC << 24) | IMMEDIATE(3),
-        (MUL << 24),
-        (WRINT << 24),
-        (PUSHC << 24) | IMMEDIATE('\n'),
-        (WRCHR << 24),
-        (HALT << 24)
-};
-
-//    writeInteger(readCharacter());
-//    writeCharacter('\n');
-unsigned int code3[] = {
-        (RDCHR << 24),
-        (WRINT << 24),
-        (PUSHC << 24) | IMMEDIATE('\n'),
-        (WRCHR << 24),
-        (HALT << 24)
-};
-*/
-
-void push(int x) {
+void push_stack(int x) {
     if(stack_pointer <= MAXITEMS) {
         stack[stack_pointer] = x;
         stack_pointer++;
@@ -88,7 +54,7 @@ void push(int x) {
     }
 }
 
-int pop() {
+int pop_stack() {
     if(stack_pointer > 0) {
         stack_pointer--;
         int tmp = stack[stack_pointer];
@@ -139,6 +105,24 @@ void print_program_memory(void) {
             case WRCHR:
                 printf("%03d:\twrchr\n", program_counter);
                 break;
+            case PUSHG:
+                printf("%03d:\tpushg\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                break;
+            case POPG:
+                printf("%03d:\tpopg\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                break;
+            case ASF:
+                printf("%03d:\tasf\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                break;
+            case RSF:
+                printf("%03d:\trsf\n", program_counter);
+                break;
+            case PUSHL:
+                printf("%03d:\tpushl\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                break;
+            case POPL:
+                printf("%03d:\tpopl\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                break;
         }
 
         program_counter++;
@@ -158,38 +142,38 @@ void start_program_memory(void) {
             case HALT:
                 break;
             case PUSHC:
-                push(SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                push_stack(SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case ADD:
-                y = pop();
-                x = pop();
-                push(x + y);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x + y);
                 break;
             case SUB:
-                y = pop();
-                x = pop();
-                push(x - y);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x - y);
                 break;
             case MUL:
-                y = pop();
-                x = pop();
-                push(x * y);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x * y);
                 break;
             case DIV:
-                y = pop();
-                x = pop();
+                y = pop_stack();
+                x = pop_stack();
                 if(y != 0) {
-                    push(x / y);
+                    push_stack(x / y);
                 } else {
                     printf("Error: Division by zero\n");
                     exit(0);
                 }
                 break;
             case MOD:
-                y = pop();
-                x = pop();
+                y = pop_stack();
+                x = pop_stack();
                 if(y != 0) {
-                    push(x % y);
+                    push_stack(x % y);
                 } else {
                     printf("Error: Modulo by zero\n");
                     exit(0);
@@ -197,17 +181,40 @@ void start_program_memory(void) {
                 break;
             case RDINT:
                 scanf("%d", &value);
-                push(value);
+                push_stack(value);
                 break;
             case WRINT:
-                printf("%d", pop());
+                printf("%d", pop_stack());
                 break;
             case RDCHR:
                 scanf("%c", &c);
-                push(c);
+                push_stack(c);
                 break;
             case WRCHR:
-                printf("%c", pop());
+                printf("%c", pop_stack());
+                break;
+            case PUSHG:
+                // Das n-te Element der SDA wird auf dem Stack abgelegt
+                push_stack(sda[SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)]);
+                break;
+            case POPG:
+                // Der Wert value wird in der SDA als n-tes Element gespeichert
+                sda[SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                break;
+            case ASF:
+                push_stack(frame_pointer); // save current fp on stack
+                frame_pointer = stack_pointer; // set start of frame
+                stack_pointer = stack_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF); // allocate n vars in frame
+                break;
+            case RSF:
+                stack_pointer = frame_pointer; // points to old fp value
+                frame_pointer = pop_stack();   // set fp to old value
+                break;
+            case PUSHL:
+                push_stack(stack[frame_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)]);
+                break;
+            case POPL:
+                stack[frame_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
                 break;
         }
 
@@ -216,7 +223,7 @@ void start_program_memory(void) {
     program_counter = 0;
 }
 
-int main(int argc, char *argv[]) {
+void command_line_arguments(int argc, char *argv[]) {
     if(argc == 2) {
         // COMMAND LINE ARGUMENTS
         if(argv[1][0] == '-') {
@@ -224,50 +231,56 @@ int main(int argc, char *argv[]) {
                 printf("usage: ./njvm [option] [option] ...\n");
                 printf("  --version        show version and exit\n");
                 printf("  --help           show this help and exit\n");
-                return 0;
+                exit(0);
             } else if (strcmp(argv[1], "--version") == 0) {
                 printf("Ninja Virtual Machine version 2 (compiled Sep 23 2015, 10:36:52)\n");
-                return 0;
+                exit(0);
             } else {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
-                return 0;
+                exit(0);
             }
-        //CODE LOADING
-        } else if(strcmp(argv[1], "") == 0){
+            // CODE LOADING
+        }
+
+        if(strcmp(argv[1], "") == 0){
             printf("Error: no code file specified\n");
-            return 0;
+            exit(0);
         } else {
             FILE *f = NULL;
             if((f = fopen(argv[1], "r")) == NULL) {
                 printf("Error: cannot open code file '%s'", argv[1]);
-                return 0;
+                exit(0);
             }
-            unsigned int format[4];
 
-            fread(format, sizeof (unsigned int), 4, f); //READ NJBF //READ VERSION //READ NUMBER OF INSTR //READ NUMBER OF SDA
+            // READ FIRST 4 LINES
+            // READ NJBF // READ VERSION // READ NUMBER OF INSTR // READ NUMBER OF SDA
+            unsigned int format[4];
+            fread(format, sizeof (unsigned int), 4, f);
             if((format[0] != 1178749518) | (format[1] != 2)) {
                 printf("error bin not matching");
-                return 0;
+                exit(0);
             }
 
-            sda = (unsigned int *) malloc(format[3]*sizeof (unsigned int));
+            // ALLOCATE MEMORY
+            sda_size = format[3];
+            sda = (unsigned int *) malloc(sda_size*sizeof (unsigned int));
             program_memory = (unsigned int *) malloc(format[2]*sizeof (unsigned int));
             fread(program_memory, sizeof (unsigned int), format[2], f);
+            fclose(f);
 
+            // RUN PROGRAM
+            printf("Ninja Virtual Machine started\n");
+            print_program_memory();
+            start_program_memory();
+            printf("Ninja Virtual Machine stopped\n");
 
+            free(sda);
+            free(program_memory);
         }
     }
+}
 
-    if(program_memory != NULL) {
-        printf("Ninja Virtual Machine started\n");
-
-        print_program_memory();
-        start_program_memory();
-
-        printf("Ninja Virtual Machine stopped\n");
-    } else  {
-        printf("Error: no program selected\n");
-    }
-
+int main(int argc, char *argv[]) {
+    command_line_arguments(argc, argv);
     return 0;
 }
