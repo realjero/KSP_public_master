@@ -27,7 +27,10 @@
 
 
 int stack_pointer = 0;
+int frame_pointer = 0;
 unsigned int stack[MAXITEMS];
+
+unsigned int *sda;
 
 unsigned int *program_memory;
 int program_counter;
@@ -215,6 +218,7 @@ void start_program_memory(void) {
 
 int main(int argc, char *argv[]) {
     if(argc == 2) {
+        // COMMAND LINE ARGUMENTS
         if(argv[1][0] == '-') {
             if (strcmp(argv[1], "--help") == 0) {
                 printf("usage: ./njvm [option] [option] ...\n");
@@ -222,25 +226,35 @@ int main(int argc, char *argv[]) {
                 printf("  --help           show this help and exit\n");
                 return 0;
             } else if (strcmp(argv[1], "--version") == 0) {
-                printf("Ninja Virtual Machine version 0 (compiled Sep 23 2015, 10:36:52)\n");
+                printf("Ninja Virtual Machine version 2 (compiled Sep 23 2015, 10:36:52)\n");
                 return 0;
             } else {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
                 return 0;
             }
+        //CODE LOADING
         } else if(strcmp(argv[1], "") == 0){
             printf("Error: no code file specified\n");
             return 0;
         } else {
-            FILE *fp = NULL;
-            fp = fopen(argv[1], "r");
-            if(fp == NULL) {
+            FILE *f = NULL;
+            if((f = fopen(argv[1], "r")) == NULL) {
                 printf("Error: cannot open code file '%s'", argv[1]);
                 return 0;
             }
-            char c[4];
-            size_t read_len = fread(c, 1, 4, fp);
-            printf("r %d bytes: c = [%c, %c, %c, %c]\n", read_len, c[0], c[1], c[2], c[3]);
+            unsigned int format[4];
+
+            fread(format, sizeof (unsigned int), 4, f); //READ NJBF //READ VERSION //READ NUMBER OF INSTR //READ NUMBER OF SDA
+            if((format[0] != 1178749518) | (format[1] != 2)) {
+                printf("error bin not matching");
+                return 0;
+            }
+
+            sda = (unsigned int *) malloc(format[3]*sizeof (unsigned int));
+            program_memory = (unsigned int *) malloc(format[2]*sizeof (unsigned int));
+            fread(program_memory, sizeof (unsigned int), format[2], f);
+
+
         }
     }
 
