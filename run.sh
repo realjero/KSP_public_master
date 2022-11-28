@@ -4,7 +4,7 @@ for t in testfiles/bin/*.bin; do
   ./vm $t > o1;
   ./testfiles/njvm $t > o2;
   DIFF=$(diff o1 o2);
-  if ["$DIFF" == ""]; then
+  if [ "$DIFF" == "" ]; then
     echo "PASSED";
   fi
 done;

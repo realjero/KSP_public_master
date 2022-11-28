@@ -26,6 +26,7 @@
 #define PUSHL 15
 #define POPL 16
 
+//TODO: CATCH NEGATIVES, IMMEDIATE INSTEAD OF SIGN EXTEND
 
 // CONVERT
 #define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl unter 23 Bit
@@ -37,7 +38,6 @@ int frame_pointer = 0;
 unsigned int stack[MAXITEMS];
 
 int sda_size = 0;
-int sda_pointer = 0;
 unsigned int *sda;
 
 unsigned int *program_memory;
@@ -54,7 +54,7 @@ void push_stack(int x) {
     }
 }
 
-int pop_stack() {
+int pop_stack(void) {
     if(stack_pointer > 0) {
         stack_pointer--;
         int tmp = stack[stack_pointer];
@@ -239,9 +239,9 @@ void command_line_arguments(int argc, char *argv[]) {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
                 exit(0);
             }
-            // CODE LOADING
         }
 
+        // CODE LOADING
         if(strcmp(argv[1], "") == 0){
             printf("Error: no code file specified\n");
             exit(0);
@@ -276,6 +276,7 @@ void command_line_arguments(int argc, char *argv[]) {
 
             free(sda);
             free(program_memory);
+            exit(0);
         }
     }
 }
