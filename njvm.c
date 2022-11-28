@@ -25,6 +25,16 @@
 #define RSF 14
 #define PUSHL 15
 #define POPL 16
+#define EQ 17
+#define NE 18
+#define LT 19
+#define LE 20
+#define GT 21
+#define GE 22
+#define JMP 23
+#define BRF 24
+#define BRT 25
+
 
 //TODO: CATCH NEGATIVES, IMMEDIATE INSTEAD OF SIGN EXTEND
 
@@ -106,22 +116,47 @@ void print_program_memory(void) {
                 printf("%03d:\twrchr\n", program_counter);
                 break;
             case PUSHG:
-                printf("%03d:\tpushg\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpushg\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case POPG:
-                printf("%03d:\tpopg\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpopg\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case ASF:
-                printf("%03d:\tasf\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tasf\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case RSF:
                 printf("%03d:\trsf\n", program_counter);
                 break;
             case PUSHL:
-                printf("%03d:\tpushl\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpushl\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case POPL:
-                printf("%03d:\tpopl\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpopl\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                break;
+            case EQ:
+                printf("%03d:\teq", program_counter);
+                break;
+            case NE:
+                printf("%03d:\tne", program_counter);
+                break;
+            case LT:
+                printf("%03d:\tlt", program_counter);
+                break;
+            case LE:
+                printf("%03d:\tle", program_counter);
+                break;
+            case GT:
+                printf("%03d:\tgt", program_counter);
+                break;
+            case GE:
+                printf("%03d:\tge", program_counter);
+                break;
+            case JMP:
+                // TODO: JMP, BRF, BRT
+                break;
+            case BRF:
+                break;
+            case BRT:
                 break;
         }
 
@@ -195,26 +230,51 @@ void start_program_memory(void) {
                 break;
             case PUSHG:
                 // Das n-te Element der SDA wird auf dem Stack abgelegt
-                push_stack(sda[SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)]);
+                push_stack(sda[IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)]);
                 break;
             case POPG:
                 // Der Wert value wird in der SDA als n-tes Element gespeichert
-                sda[SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                sda[IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
                 break;
             case ASF:
                 push_stack(frame_pointer); // save current fp on stack
                 frame_pointer = stack_pointer; // set start of frame
-                stack_pointer = stack_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF); // allocate n vars in frame
+                stack_pointer = stack_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF); // allocate n vars in frame
                 break;
             case RSF:
                 stack_pointer = frame_pointer; // points to old fp value
                 frame_pointer = pop_stack();   // set fp to old value
                 break;
             case PUSHL:
-                push_stack(stack[frame_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)]);
+                push_stack(stack[frame_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)]);
                 break;
             case POPL:
-                stack[frame_pointer + SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                stack[frame_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                break;
+                // TODO: Ops, JMP, BRF, BRT
+            case EQ:
+                printf("%03d:\teq", program_counter);
+                break;
+            case NE:
+                printf("%03d:\tne", program_counter);
+                break;
+            case LT:
+                printf("%03d:\tlt", program_counter);
+                break;
+            case LE:
+                printf("%03d:\tle", program_counter);
+                break;
+            case GT:
+                printf("%03d:\tgt", program_counter);
+                break;
+            case GE:
+                printf("%03d:\tge", program_counter);
+                break;
+            case JMP:
+                break;
+            case BRF:
+                break;
+            case BRT:
                 break;
         }
 
