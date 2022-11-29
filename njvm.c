@@ -55,25 +55,23 @@ int program_counter;
 
 
 void push_stack(int x) {
-    if(stack_pointer <= MAXITEMS) {
-        stack[stack_pointer] = x;
-        stack_pointer++;
-    } else {
+    if(stack_pointer == MAXITEMS) {
         printf("Error: Stackoverflow\n");
         exit(0);
     }
+    stack[stack_pointer] = x;
+    stack_pointer++;
 }
 
 int pop_stack(void) {
-    if(stack_pointer > 0) {
-        stack_pointer--;
-        int tmp = stack[stack_pointer];
-        stack[stack_pointer] = 0;
-        return tmp;
-    } else {
+    if(stack_pointer == 0) {
         printf("Error: Stack empty\n");
         exit(0);
     }
+    stack_pointer--;
+    int tmp = stack[stack_pointer];
+    stack[stack_pointer] = 0;
+    return tmp;
 }
 
 
@@ -163,6 +161,14 @@ void print_program_memory(void) {
                 printf("%03d:\tbrt\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
         }
+
+        // Anzeigen des Stacks
+        // Anzeigen der statischen Daten
+        // Listen des Programms
+        // Ausführen des nächsten Befehls
+        // Weiterlaufen ohne Anhalten und Verlassen
+        // ? BREAKPOINTS ?
+
     } while (instr >> 24 != HALT);
     program_counter = 0;
 }
@@ -201,22 +207,20 @@ void start_program_memory(void) {
             case DIV:
                 y = pop_stack();
                 x = pop_stack();
-                if(y != 0) {
-                    push_stack(x / y);
-                } else {
+                if(y == 0) {
                     printf("Error: Division by zero\n");
                     exit(0);
                 }
+                push_stack(x / y);
                 break;
             case MOD:
                 y = pop_stack();
                 x = pop_stack();
-                if(y != 0) {
-                    push_stack(x % y);
-                } else {
+                if(y == 0) {
                     printf("Error: Modulo by zero\n");
                     exit(0);
                 }
+                push_stack(x % y);
                 break;
             case RDINT:
                 scanf("%d", &value);
