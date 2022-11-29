@@ -1,4 +1,6 @@
 pushc 3
-pushc 4
-eq
+pushc 3
+le
 wrint
+pushc '\n'
+wrchr
