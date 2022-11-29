@@ -1,4 +1,3 @@
-cd ..;
 gcc -g -Wall -std=c99 -pedantic -o vm njvm.c;
 for t in testfiles/bin/*.bin; do
   echo "TESTING: $t";
@@ -8,6 +7,7 @@ for t in testfiles/bin/*.bin; do
   if [ "$DIFF" == "" ]; then
     echo "PASSED";
   fi
-  rm o1;
-  rm o2;
 done;
+rm o1;
+rm o2;
+rm vm
