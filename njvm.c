@@ -321,39 +321,40 @@ void command_line_arguments(int argc, char *argv[]) {
         if(strcmp(argv[1], "") == 0){
             printf("Error: no code file specified\n");
             exit(0);
-        } else {
-            FILE *f = NULL;
-            if((f = fopen(argv[1], "r")) == NULL) {
-                printf("Error: cannot open code file '%s'", argv[1]);
-                exit(0);
-            }
+        }
 
-            // READ FIRST 4 LINES
-            // READ NJBF // READ VERSION // READ NUMBER OF INSTR // READ NUMBER OF SDA
-            unsigned int format[4];
-            fread(format, sizeof (unsigned int), 4, f);
-            if((format[0] != 1178749518) | (format[1] != 3)) {
-                printf("error bin not matching");
-                exit(0);
-            }
-
-            // ALLOCATE MEMORY
-            sda_size = format[3];
-            sda = (unsigned int *) malloc(sda_size*sizeof (unsigned int));
-            program_memory = (unsigned int *) malloc(format[2]*sizeof (unsigned int));
-            fread(program_memory, sizeof (unsigned int), format[2], f);
-            fclose(f);
-
-            // RUN PROGRAM
-            printf("Ninja Virtual Machine started\n");
-            //print_program_memory();
-            start_program_memory();
-            printf("Ninja Virtual Machine stopped\n");
-
-            free(sda);
-            free(program_memory);
+        FILE *f = NULL;
+        if((f = fopen(argv[1], "r")) == NULL) {
+            printf("Error: cannot open code file '%s'", argv[1]);
             exit(0);
         }
+
+        // READ FIRST 4 LINES
+        // READ NJBF // READ VERSION // READ NUMBER OF INSTR // READ NUMBER OF SDA
+        unsigned int format[4];
+        fread(format, sizeof (unsigned int), 4, f);
+        if((format[0] != 1178749518) | (format[1] != 3)) {
+            printf("error bin not matching");
+            exit(0);
+        }
+
+        // ALLOCATE MEMORY
+        sda_size = format[3];
+        sda = (unsigned int *) malloc(sda_size*sizeof (unsigned int));
+        program_memory = (unsigned int *) malloc(format[2]*sizeof (unsigned int));
+        fread(program_memory, sizeof (unsigned int), format[2], f);
+        fclose(f);
+
+        // RUN PROGRAM
+        printf("Ninja Virtual Machine started\n");
+        //print_program_memory();
+        start_program_memory();
+        printf("Ninja Virtual Machine stopped\n");
+
+        free(sda);
+        free(program_memory);
+        exit(0);
+
     }
 }
 
