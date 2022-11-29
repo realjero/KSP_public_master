@@ -134,22 +134,22 @@ void print_program_memory(void) {
                 printf("%03d:\tpopl\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
                 break;
             case EQ:
-                printf("%03d:\teq", program_counter);
+                printf("%03d:\teq\n", program_counter);
                 break;
             case NE:
-                printf("%03d:\tne", program_counter);
+                printf("%03d:\tne\n", program_counter);
                 break;
             case LT:
-                printf("%03d:\tlt", program_counter);
+                printf("%03d:\tlt\n", program_counter);
                 break;
             case LE:
-                printf("%03d:\tle", program_counter);
+                printf("%03d:\tle\n", program_counter);
                 break;
             case GT:
-                printf("%03d:\tgt", program_counter);
+                printf("%03d:\tgt\n", program_counter);
                 break;
             case GE:
-                printf("%03d:\tge", program_counter);
+                printf("%03d:\tge\n", program_counter);
                 break;
             case JMP:
                 // TODO: JMP, BRF, BRT
@@ -253,22 +253,34 @@ void start_program_memory(void) {
                 break;
                 // TODO: Ops, JMP, BRF, BRT
             case EQ:
-                printf("%03d:\teq", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x == y ? 1 : 0);
                 break;
             case NE:
-                printf("%03d:\tne", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x != y ? 1 : 0);
                 break;
             case LT:
-                printf("%03d:\tlt", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x < y ? 1 : 0);
                 break;
             case LE:
-                printf("%03d:\tle", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x <= y ? 1 : 0);
                 break;
             case GT:
-                printf("%03d:\tgt", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x > y ? 1 : 0);
                 break;
             case GE:
-                printf("%03d:\tge", program_counter);
+                y = pop_stack();
+                x = pop_stack();
+                push_stack(x >= y ? 1 : 0);
                 break;
             case JMP:
                 break;
@@ -316,7 +328,7 @@ void command_line_arguments(int argc, char *argv[]) {
             // READ NJBF // READ VERSION // READ NUMBER OF INSTR // READ NUMBER OF SDA
             unsigned int format[4];
             fread(format, sizeof (unsigned int), 4, f);
-            if((format[0] != 1178749518) | (format[1] != 2)) {
+            if((format[0] != 1178749518) | (format[1] != 3)) {
                 printf("error bin not matching");
                 exit(0);
             }
@@ -330,7 +342,7 @@ void command_line_arguments(int argc, char *argv[]) {
 
             // RUN PROGRAM
             printf("Ninja Virtual Machine started\n");
-            print_program_memory();
+            //print_program_memory();
             start_program_memory();
             printf("Ninja Virtual Machine stopped\n");
 
