@@ -1,3 +1,4 @@
+cd ..;
 gcc -g -Wall -std=c99 -pedantic -o vm njvm.c;
 for t in testfiles/bin/*.bin; do
   echo "TESTING: $t";
