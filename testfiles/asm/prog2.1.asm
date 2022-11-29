@@ -1,5 +1,5 @@
 //
-// prog1.asm -- an assembler example with global variables
+// prog2.1.asm -- an assembler example with global variables
 //
 
 // global Integer x;

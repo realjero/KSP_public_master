@@ -1,5 +1,5 @@
 //
-// prog2.asm -- an assembler example with local variables
+// prog2.2.asm -- an assembler example with local variables
 //
 
 // local Integer x;
