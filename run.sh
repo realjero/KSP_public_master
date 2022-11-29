@@ -7,4 +7,6 @@ for t in testfiles/bin/*.bin; do
   if [ "$DIFF" == "" ]; then
     echo "PASSED";
   fi
+  rm o1;
+  rm o2;
 done;
