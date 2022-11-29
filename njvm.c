@@ -78,106 +78,110 @@ int pop_stack(void) {
 
 
 void print_program_memory(void) {
-    int opcode;
+    int instr;
     do {
-        opcode = program_memory[program_counter] >> 24;
-        switch (opcode) {
+        instr = program_memory[program_counter];
+        program_counter++;
+
+        switch (instr >> 24) {
             case HALT:
-                printf("%03d:\thalt\n", program_counter);
+                printf("%03d:\thalt\n", program_counter - 1);
                 break;
             case PUSHC:
-                printf("%03d:\tpushc\t%d\n", program_counter, SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpushc\t%d\n", program_counter - 1, SIGN_EXTEND(IMMEDIATE(instr)));
                 break;
             case ADD:
-                printf("%03d:\tadd\n", program_counter);
+                printf("%03d:\tadd\n", program_counter - 1);
                 break;
             case SUB:
-                printf("%03d:\tsub\n", program_counter);
+                printf("%03d:\tsub\n", program_counter - 1);
                 break;
             case MUL:
-                printf("%03d:\tmul\n", program_counter);
+                printf("%03d:\tmul\n", program_counter - 1);
                 break;
             case DIV:
-                printf("%03d:\tdiv\n", program_counter);
+                printf("%03d:\tdiv\n", program_counter - 1);
                 break;
             case MOD:
-                printf("%03d:\tmod\n", program_counter);
+                printf("%03d:\tmod\n", program_counter - 1);
                 break;
             case RDINT:
-                printf("%03d:\trdint\n", program_counter);
+                printf("%03d:\trdint\n", program_counter - 1);
                 break;
             case WRINT:
-                printf("%03d:\twrint\n", program_counter);
+                printf("%03d:\twrint\n", program_counter - 1);
                 break;
             case RDCHR:
-                printf("%03d:\trdchr\n", program_counter);
+                printf("%03d:\trdchr\n", program_counter - 1);
                 break;
             case WRCHR:
-                printf("%03d:\twrchr\n", program_counter);
+                printf("%03d:\twrchr\n", program_counter - 1);
                 break;
             case PUSHG:
-                printf("%03d:\tpushg\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpushg\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case POPG:
-                printf("%03d:\tpopg\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpopg\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case ASF:
-                printf("%03d:\tasf\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tasf\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case RSF:
-                printf("%03d:\trsf\n", program_counter);
+                printf("%03d:\trsf\n", program_counter - 1);
                 break;
             case PUSHL:
-                printf("%03d:\tpushl\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpushl\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case POPL:
-                printf("%03d:\tpopl\t%d\n", program_counter, IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF));
+                printf("%03d:\tpopl\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case EQ:
-                printf("%03d:\teq\n", program_counter);
+                printf("%03d:\teq\n", program_counter - 1);
                 break;
             case NE:
-                printf("%03d:\tne\n", program_counter);
+                printf("%03d:\tne\n", program_counter - 1);
                 break;
             case LT:
-                printf("%03d:\tlt\n", program_counter);
+                printf("%03d:\tlt\n", program_counter - 1);
                 break;
             case LE:
-                printf("%03d:\tle\n", program_counter);
+                printf("%03d:\tle\n", program_counter - 1);
                 break;
             case GT:
-                printf("%03d:\tgt\n", program_counter);
+                printf("%03d:\tgt\n", program_counter - 1);
                 break;
             case GE:
-                printf("%03d:\tge\n", program_counter);
+                printf("%03d:\tge\n", program_counter - 1);
                 break;
             case JMP:
-                // TODO: JMP, BRF, BRT
+                printf("%03d:\tjmp\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case BRF:
+                printf("%03d:\tbrf\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
             case BRT:
+                printf("%03d:\tbrt\t%d\n", program_counter - 1, IMMEDIATE(instr));
                 break;
         }
-
-        program_counter++;
-    } while (opcode != HALT);
+    } while (instr >> 24 != HALT);
     program_counter = 0;
 }
 
 void start_program_memory(void) {
-    int opcode;
+    int instr;
     do {
         int value;
         char c;
         int x, y;
 
-        opcode = program_memory[program_counter] >> 24;
-        switch (opcode) {
+        instr = program_memory[program_counter];
+        program_counter++;
+
+        switch (instr >> 24) {
             case HALT:
                 break;
             case PUSHC:
-                push_stack(SIGN_EXTEND(program_memory[program_counter] & 0x00FFFFFF));
+                push_stack(SIGN_EXTEND(instr & 0x00FFFFFF));
                 break;
             case ADD:
                 y = pop_stack();
@@ -230,28 +234,27 @@ void start_program_memory(void) {
                 break;
             case PUSHG:
                 // Das n-te Element der SDA wird auf dem Stack abgelegt
-                push_stack(sda[IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)]);
+                push_stack(sda[IMMEDIATE(instr)]);
                 break;
             case POPG:
                 // Der Wert value wird in der SDA als n-tes Element gespeichert
-                sda[IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                sda[IMMEDIATE(instr)] = pop_stack();
                 break;
             case ASF:
                 push_stack(frame_pointer); // save current fp on stack
                 frame_pointer = stack_pointer; // set start of frame
-                stack_pointer = stack_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF); // allocate n vars in frame
+                stack_pointer = stack_pointer + IMMEDIATE(instr); // allocate n vars in frame
                 break;
             case RSF:
                 stack_pointer = frame_pointer; // points to old fp value
                 frame_pointer = pop_stack();   // set fp to old value
                 break;
             case PUSHL:
-                push_stack(stack[frame_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)]);
+                push_stack(stack[frame_pointer + IMMEDIATE(instr)]);
                 break;
             case POPL:
-                stack[frame_pointer + IMMEDIATE(program_memory[program_counter] & 0x00FFFFFF)] = pop_stack();
+                stack[frame_pointer + IMMEDIATE(instr)] = pop_stack();
                 break;
-                // TODO: Ops, JMP, BRF, BRT
             case EQ:
                 y = pop_stack();
                 x = pop_stack();
@@ -283,15 +286,16 @@ void start_program_memory(void) {
                 push_stack(x >= y ? 1 : 0);
                 break;
             case JMP:
+                program_counter = IMMEDIATE(instr);
                 break;
             case BRF:
+                if(pop_stack() == 0) program_counter = IMMEDIATE(instr);
                 break;
             case BRT:
+                if(pop_stack() == 1) program_counter = IMMEDIATE(instr);
                 break;
         }
-
-        program_counter++;
-    } while (opcode != HALT);
+    } while (instr >> 24 != HALT);
     program_counter = 0;
 }
 
