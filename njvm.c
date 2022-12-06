@@ -35,12 +35,18 @@
 #define JMP 23
 #define BRF 24
 #define BRT 25
+#define CALL 26
+#define RET 27
+#define DROP 28
+#define PUSHR 29
+#define POPR 30
+#define DUP 31
 
 
-//TODO: CATCH NEGATIVES, IMMEDIATE INSTEAD OF SIGN EXTEND
+//TODO: CATCH NEGATIVES, IMMEDIATE INSTEAD OF SIGN EXTEND, BREAKPOINTS
 
 // CONVERT
-#define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl unter 23 Bit
+#define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl <= 23 Bit
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))          // Wenn Bit 23 => 1, dann negative Zahl, die durch 8 weitere 1-en in den höchstwertigen Bits erweitert werden muss.
 
 
@@ -49,12 +55,12 @@ int frame_pointer = 0;
 unsigned int stack[MAXITEMS];
 
 unsigned int *sda;
+unsigned int sda_size;
 
 unsigned int *program_memory;
 int program_counter;
 
 
-unsigned int sda_size;
 
 void print_sda() {
     for (int i = 0; i < sda_size; i++) {
@@ -175,6 +181,24 @@ void print_instruction(unsigned int instr, int pc) {
             break;
         case BRT:
             printf("%03d:\tbrt\t%d\n", pc, IMMEDIATE(instr));
+            break;
+        case CALL:
+            printf("%03d:\tcall\t%d\n", pc, IMMEDIATE(instr));
+            break;
+        case RET:
+            printf("%03d:\tret\n", pc);
+            break;
+        case DROP:
+            printf("%03d:\tdrop\t%d\n", pc, IMMEDIATE(instr));
+            break;
+        case PUSHR:
+            printf("%03d:\tpushr\n", pc);
+            break;
+        case POPR:
+            printf("%03d:\tpopr\n", pc);
+            break;
+        case DUP:
+            printf("%03d:\tdup\n", pc);
             break;
     }
 }
@@ -297,6 +321,24 @@ void execute_instruction(unsigned int instr) {
             break;
         case BRT:
             if(pop_stack() == 1) program_counter = IMMEDIATE(instr);
+            break;
+        case CALL:
+            push_stack(program_counter);
+            program_counter = IMMEDIATE(instr);
+            break;
+        case RET:
+            program_counter = pop_stack();
+            break;
+        case DROP:
+            for(int i = 0; i < IMMEDIATE(instr); i++) {
+                pop_stack();
+            }
+            break;
+        case PUSHR:
+            break;
+        case POPR:
+            break;
+        case DUP:
             break;
     }
 }
