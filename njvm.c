@@ -57,6 +57,8 @@ unsigned int stack[MAXITEMS];
 unsigned int *sda;
 unsigned int sda_size;
 
+unsigned int return_value_register;
+
 unsigned int *program_memory;
 int program_counter;
 
@@ -84,7 +86,7 @@ void print_stack() {
 
 void push_stack(int x) {
     if(stack_pointer == MAXITEMS) {
-        printf("Error: Stackoverflow\n");
+        printf("Error: stack overflow\n");
         exit(0);
     }
     stack[stack_pointer] = x;
@@ -93,7 +95,7 @@ void push_stack(int x) {
 
 int pop_stack(void) {
     if(stack_pointer == 0) {
-        printf("Error: Stack empty\n");
+        printf("Error: stack underflow\n");
         exit(0);
     }
     stack_pointer--;
@@ -150,10 +152,10 @@ void print_instruction(unsigned int instr, int pc) {
             printf("%03d:\trsf\n", pc);
             break;
         case PUSHL:
-            printf("%03d:\tpushl\t%d\n", pc, IMMEDIATE(instr));
+            printf("%03d:\tpushl\t%d\n", pc, SIGN_EXTEND(IMMEDIATE(instr)));
             break;
         case POPL:
-            printf("%03d:\tpopl\t%d\n", pc, IMMEDIATE(instr));
+            printf("%03d:\tpopl\t%d\n", pc, SIGN_EXTEND(IMMEDIATE(instr)));
             break;
         case EQ:
             printf("%03d:\teq\n", pc);
@@ -278,10 +280,10 @@ void execute_instruction(unsigned int instr) {
             frame_pointer = pop_stack();   // set fp to old value
             break;
         case PUSHL:
-            push_stack(stack[frame_pointer + IMMEDIATE(instr)]);
+            push_stack(stack[frame_pointer + SIGN_EXTEND(IMMEDIATE(instr))]);
             break;
         case POPL:
-            stack[frame_pointer + IMMEDIATE(instr)] = pop_stack();
+            stack[frame_pointer + SIGN_EXTEND(IMMEDIATE(instr))] = pop_stack();
             break;
         case EQ:
             y = pop_stack();
@@ -335,10 +337,15 @@ void execute_instruction(unsigned int instr) {
             }
             break;
         case PUSHR:
+            push_stack(return_value_register);
             break;
         case POPR:
+            return_value_register = pop_stack();
             break;
         case DUP:
+            x = pop_stack();
+            push_stack(x);
+            push_stack(x);
             break;
     }
 }
@@ -437,7 +444,7 @@ void command_line_arguments(int argc, char *argv[]) {
     unsigned int format[4];
     fread(format, sizeof (unsigned int), 4, f);
     // CHECK NJBF // CHECK VERSION
-    if((format[0] != 1178749518) | (format[1] != 3)) {
+    if((format[0] != 1178749518) | (format[1] != 4)) {
         printf("error bin not matching");
         exit(0);
     }
