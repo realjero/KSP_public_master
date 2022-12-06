@@ -1,4 +1,3 @@
-cd ..;
 cd testfiles;
 for t in asm/*.asm; do
   file="${t%.*}"
