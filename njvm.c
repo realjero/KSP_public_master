@@ -49,20 +49,30 @@
 #define IMMEDIATE(x) ((x) & 0x00FFFFFF)                                     // Zahl <= 23 Bit
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))          // Wenn Bit 23 => 1, dann negative Zahl, die durch 8 weitere 1-en in den höchstwertigen Bits erweitert werden muss.
 
+typedef struct {
+    unsigned int size;
+    unsigned char data[1];
+} *ObjRef;
+
+typedef struct {
+    bool isObjRef;
+    union {
+        ObjRef objRef;
+        int number;
+    } u;
+} StackSlot;
 
 int stack_pointer = 0;
 int frame_pointer = 0;
-unsigned int stack[MAXITEMS];
+StackSlot stack[MAXITEMS];
 
-unsigned int *sda;
-unsigned int sda_size;
+ObjRef *sda;
+size_t sda_size;
 
-unsigned int return_value_register;
+ObjRef return_value_register;
 
 unsigned int *program_memory;
 int program_counter;
-
-
 
 void print_sda() {
     for (int i = 0; i < sda_size; i++) {
@@ -74,33 +84,41 @@ void print_sda() {
 void print_stack() {
     for (int i = stack_pointer; i >= 0; i--) {
         if(i == stack_pointer) {
-            printf("sp\t\t--->\t%04d:   xxxx\n", i);
+            printf("sp\t\t--->\t%04d:\txxxx\n", i);
         } else if (i == frame_pointer) {
-            printf("fp\t\t--->\t%04d:   %d\n", i, stack[i]);
+            if(stack[i].isObjRef == true) {
+                printf("fp\t\t--->\t%04d:\t%p (objref)\n", i, stack[i].u.objRef);
+            } else {
+                printf("fp\t\t--->\t%04d:\t%d (number)\n", i, stack[i].u.number);
+            }
         } else {
-            printf("\t\t\t\t%04d:\t%d\n", i, stack[i]);
+            if(stack[i].isObjRef == true) {
+                printf("\t\t\t\t%04d:\t%p (objref)\n", i, stack[i].u.objRef);
+            } else {
+                printf("\t\t\t\t%04d:\t%d\n (number)", i, stack[i].u.number);
+            }
         }
     }
     printf("\t\t\t\t\t\t--- bottom of stack ---\n");
 }
 
-void push_stack(int x) {
+void push_stack(StackSlot s) {
     if(stack_pointer == MAXITEMS) {
         printf("Error: stack overflow\n");
         exit(0);
     }
-    stack[stack_pointer] = x;
+    stack[stack_pointer] = s;
     stack_pointer++;
 }
 
-int pop_stack(void) {
+StackSlot pop_stack(void) {
     if(stack_pointer == 0) {
         printf("Error: stack underflow\n");
         exit(0);
     }
     stack_pointer--;
-    int tmp = stack[stack_pointer];
-    stack[stack_pointer] = 0;
+    StackSlot tmp = stack[stack_pointer];
+    //null old stack???
     return tmp;
 }
 
@@ -205,79 +223,139 @@ void print_instruction(unsigned int instr, int pc) {
     }
 }
 
+StackSlot int_to_StackSlot(unsigned int x) {
+    ObjRef object;
+    StackSlot slot;
+
+    if((object = malloc(sizeof(unsigned int) + sizeof (unsigned int))) == NULL)
+        perror("malloc");
+
+    object->size = sizeof (unsigned int);
+    *(unsigned int *) object->data = x;
+
+    slot.isObjRef = true;
+    slot.u.objRef = object;
+    return slot;
+}
+
+StackSlot char_to_StackSlot(char x) {
+    ObjRef object;
+    StackSlot slot;
+
+    if((object = malloc(sizeof(unsigned int) + sizeof(char))) == NULL)
+        perror("malloc");
+
+    object->size = sizeof(char);
+    *(char *) object->data = x;
+
+    slot.isObjRef = true;
+    slot.u.objRef = object;
+    return slot;
+}
+
+void print_object(long * address) {
+    ObjRef obj = (ObjRef) address;
+    printf("value: %d\n", *obj->data);
+}
+
 void execute_instruction(unsigned int instr) {
     int value;
     char c;
-    int x, y;
+    StackSlot x, y;
+    ObjRef object;
+    StackSlot slot;
     switch (instr >> 24) {
         case HALT:
             break;
         case PUSHC:
-            push_stack(SIGN_EXTEND(instr & 0x00FFFFFF));
+            push_stack(int_to_StackSlot(SIGN_EXTEND(instr & 0x00FFFFFF)));
             break;
         case ADD:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x + y);
+
+            if (y.isObjRef && x.isObjRef) {
+                if (y.u.objRef->size == sizeof(unsigned int) && x.u.objRef->size == sizeof(unsigned int)) {
+                    push_stack(int_to_StackSlot(*(unsigned int *) x.u.objRef->data + *(unsigned int *) y.u.objRef->data));
+                }
+            }
             break;
         case SUB:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x - y);
+            if (y.isObjRef && x.isObjRef) {
+                if (y.u.objRef->size == sizeof(unsigned int) && x.u.objRef->size == sizeof(unsigned int)) {
+                    push_stack(int_to_StackSlot(*(unsigned int *) x.u.objRef->data - *(unsigned int *) y.u.objRef->data));
+                }
+            }
             break;
         case MUL:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x * y);
+            if (y.isObjRef && x.isObjRef) {
+                if (y.u.objRef->size == sizeof(unsigned int) && x.u.objRef->size == sizeof(unsigned int)) {
+                    push_stack(int_to_StackSlot(*(unsigned int *) x.u.objRef->data * *(unsigned int *) y.u.objRef->data));
+                }
+            }
             break;
         case DIV:
             y = pop_stack();
             x = pop_stack();
-            if(y == 0) {
-                printf("Error: Division by zero\n");
-                exit(0);
+            if (y.isObjRef && x.isObjRef) {
+                if (y.u.objRef->size == sizeof(unsigned int) && x.u.objRef->size == sizeof(unsigned int)) {
+                    if(*(unsigned int *) y.u.objRef->data == 0) {
+                        printf("Error: Division by zero\n");
+                        exit(0);
+                    }
+                    push_stack(int_to_StackSlot(*(unsigned int *) x.u.objRef->data / *(unsigned int *) y.u.objRef->data));
+                }
             }
-            push_stack(x / y);
             break;
         case MOD:
             y = pop_stack();
             x = pop_stack();
-            if(y == 0) {
-                printf("Error: Modulo by zero\n");
-                exit(0);
+            if (y.isObjRef && x.isObjRef) {
+                if (y.u.objRef->size == sizeof(unsigned int) && x.u.objRef->size == sizeof(unsigned int)) {
+                    if(*(unsigned int *) y.u.objRef->data == 0) {
+                        printf("Error: Modulo by zero\n");
+                        exit(0);
+                    }
+                    push_stack(int_to_StackSlot(*(unsigned int *) x.u.objRef->data % *(unsigned int *) y.u.objRef->data));
+                }
             }
-            push_stack(x % y);
             break;
         case RDINT:
             scanf("%d", &value);
-            push_stack(value);
+            push_stack(int_to_StackSlot(value));
             break;
         case WRINT:
-            printf("%d", pop_stack());
+            printf("%d", *(unsigned int *) pop_stack().u.objRef->data);
             break;
         case RDCHR:
             scanf("%c", &c);
-            push_stack(c);
+            push_stack(char_to_StackSlot(c));
             break;
         case WRCHR:
-            printf("%c", pop_stack());
+            printf("%c", *(char *) pop_stack().u.objRef->data);
             break;
         case PUSHG:
             // Das n-te Element der SDA wird auf dem Stack abgelegt
-            push_stack(sda[IMMEDIATE(instr)]);
+            push_stack(int_to_StackSlot(*(unsigned int *) sda[IMMEDIATE(instr)]->data));
             break;
         case POPG:
             // Der Wert value wird in der SDA als n-tes Element gespeichert
-            sda[IMMEDIATE(instr)] = pop_stack();
+            sda[IMMEDIATE(instr)] = pop_stack().u.objRef;
             break;
         case ASF:
-            push_stack(frame_pointer); // save current fp on stack
+            slot.isObjRef = false;
+            slot.u.number = frame_pointer;
+            push_stack(slot); // save current fp on stack
             frame_pointer = stack_pointer; // set start of frame
             stack_pointer = stack_pointer + IMMEDIATE(instr); // allocate n vars in frame
             break;
         case RSF:
             stack_pointer = frame_pointer; // points to old fp value
-            frame_pointer = pop_stack();   // set fp to old value
+            frame_pointer = pop_stack().u.number;   // set fp to old value
             break;
         case PUSHL:
             push_stack(stack[frame_pointer + SIGN_EXTEND(IMMEDIATE(instr))]);
@@ -288,48 +366,48 @@ void execute_instruction(unsigned int instr) {
         case EQ:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x == y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data == *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case NE:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x != y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data != *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case LT:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x < y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data < *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case LE:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x <= y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data <= *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case GT:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x > y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data > *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case GE:
             y = pop_stack();
             x = pop_stack();
-            push_stack(x >= y ? 1 : 0);
+            push_stack(int_to_StackSlot(*(unsigned int *)x.u.objRef->data >= *(unsigned int *)y.u.objRef->data ? 1 : 0));
             break;
         case JMP:
             program_counter = IMMEDIATE(instr);
             break;
         case BRF:
-            if(pop_stack() == 0) program_counter = IMMEDIATE(instr);
+            if(*(unsigned int *)pop_stack().u.objRef->data == 0) program_counter = IMMEDIATE(instr);
             break;
         case BRT:
-            if(pop_stack() == 1) program_counter = IMMEDIATE(instr);
+            if(*(unsigned int *)pop_stack().u.objRef->data == 1) program_counter = IMMEDIATE(instr);
             break;
         case CALL:
-            push_stack(program_counter);
+            push_stack(int_to_StackSlot(program_counter));
             program_counter = IMMEDIATE(instr);
             break;
         case RET:
-            program_counter = pop_stack();
+            program_counter = *(unsigned int *)pop_stack().u.objRef->data;
             break;
         case DROP:
             for(int i = 0; i < IMMEDIATE(instr); i++) {
@@ -337,10 +415,10 @@ void execute_instruction(unsigned int instr) {
             }
             break;
         case PUSHR:
-            push_stack(return_value_register);
+            push_stack(int_to_StackSlot(*(unsigned int *)return_value_register->data));
             break;
         case POPR:
-            return_value_register = pop_stack();
+            return_value_register = pop_stack().u.objRef;
             break;
         case DUP:
             x = pop_stack();
@@ -375,10 +453,16 @@ void execute_program(bool debug) {
 
             switch (e[0]) {
                 case 'i':
-                    printf("DEBUG [inspect]: stack, data?\n");
+                    printf("DEBUG [inspect]: stack, data, object?\n");
                     scanf("%s", e);
                     if(e[0] == 's') print_stack();
                     if(e[0] == 'd') print_sda();
+                    if(e[0] == 'o') {
+                        printf("Object reference:\n");
+                        long * address;
+                        scanf("%p", &address);
+                        print_object(address);
+                    }
                     goto info;
                 case 'l':
                     print_program();
@@ -423,7 +507,7 @@ void command_line_arguments(int argc, char *argv[]) {
                 }
                 debug = true;
             } else if (strcmp(argv[1], "--version") == 0) {
-                printf("Ninja Virtual Machine version 3 (compiled Sep 23 2015, 10:36:52)\n");
+                printf("Ninja Virtual Machine version 5 (compiled Sep 23 2015, 10:36:52)\n");
                 exit(0);
             } else {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[1]);
@@ -444,7 +528,7 @@ void command_line_arguments(int argc, char *argv[]) {
     unsigned int format[4];
     fread(format, sizeof (unsigned int), 4, f);
     // CHECK NJBF // CHECK VERSION
-    if((format[0] != 1178749518) | (format[1] != 4)) {
+    if((format[0] != 1178749518) | (format[1] != 5)) {
         printf("error bin not matching");
         exit(0);
     }
@@ -452,8 +536,8 @@ void command_line_arguments(int argc, char *argv[]) {
     if(debug) printf("DEBUG: file '%s' loaded (code size = %d, data size = %d)\n", argv[2], format[2], format[3]);
 
     // ALLOCATE MEMORY // READ NUMBER OF INSTR // READ NUMBER OF SDA
-    program_memory = (unsigned int *) malloc(format[2]*sizeof (unsigned int));
-    sda = (unsigned int *) malloc(format[3]*sizeof (unsigned int));
+    program_memory = malloc(format[2]*sizeof (unsigned int));
+    sda = malloc(format[3] * sizeof (ObjRef));
     sda_size = format[3];
     fread(program_memory, sizeof (unsigned int), format[2], f);
     fclose(f);
