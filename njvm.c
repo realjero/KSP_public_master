@@ -102,26 +102,6 @@ void print_stack() {
     printf("\t\t\t\t\t\t--- bottom of stack ---\n");
 }
 
-void push_stack(StackSlot s) {
-    if(stack_pointer == MAXITEMS) {
-        printf("Error: stack overflow\n");
-        exit(0);
-    }
-    stack[stack_pointer] = s;
-    stack_pointer++;
-}
-
-StackSlot pop_stack() {
-    if(stack_pointer == 0) {
-        printf("Error: stack underflow\n");
-        exit(0);
-    }
-    stack_pointer--;
-    StackSlot tmp = stack[stack_pointer];
-    //null stack[stack_pointer]???
-    return tmp;
-}
-
 void print_instruction(unsigned int instr, int pc) {
     switch (instr >> 24) {
         case HALT:
@@ -223,6 +203,37 @@ void print_instruction(unsigned int instr, int pc) {
     }
 }
 
+void print_program(void) {
+    unsigned int instr;
+    int pc = 0;
+    do {
+        instr = program_memory[pc];
+        pc++;
+        print_instruction(instr, pc - 1);
+    } while (instr >> 24 != HALT);
+}
+
+
+void push_stack(StackSlot s) {
+    if(stack_pointer == MAXITEMS) {
+        printf("Error: stack overflow\n");
+        exit(0);
+    }
+    stack[stack_pointer] = s;
+    stack_pointer++;
+}
+
+StackSlot pop_stack() {
+    if(stack_pointer == 0) {
+        printf("Error: stack underflow\n");
+        exit(0);
+    }
+    stack_pointer--;
+    StackSlot tmp = stack[stack_pointer];
+    //null stack[stack_pointer]???
+    return tmp;
+}
+
 StackSlot new_intStackSlot(unsigned int x) {
     ObjRef object;
     StackSlot slot;
@@ -256,6 +267,7 @@ StackSlot new_charStackSlot(char x) {
 unsigned long object_value(long * address) {
     return *((ObjRef) address)->data;
 }
+
 
 void execute_instruction(unsigned int instr) {
     int value;
@@ -423,16 +435,6 @@ void execute_instruction(unsigned int instr) {
             push_stack(left);
             break;
     }
-}
-
-void print_program(void) {
-    unsigned int instr;
-    int pc = 0;
-    do {
-        instr = program_memory[pc];
-        pc++;
-        print_instruction(instr, pc - 1);
-    } while (instr >> 24 != HALT);
 }
 
 void execute_program(bool debug) {
